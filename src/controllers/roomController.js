@@ -1,4 +1,4 @@
-import { addRoom, updateRoom, getRoomsByStatus, updateRoomStatus, deleteRoom, getRoomById, getAllRooms, deleteRooms } from '../models/roomModel.js';
+import { addRoom, updateRoom, getRoomsByStatus, updateRoomStatus, deleteRoom, getRoomById, getAllRooms, deleteRooms, updateRoomStatusBulk } from '../models/roomModel.js';
 import cloudinary from '../config/cloudinary.js';
 import fs from 'fs/promises';
 
@@ -116,6 +116,25 @@ export const deleteMultipleRooms = async (req, res) => {
     }
 };
 
+export const updateRoomStatusBulkController = async (req, res) => {
+  try {
+    const { ids, status } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'Room IDs are required' });
+    }
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    const updatedRooms = await updateRoomStatusBulk(ids, status);
+    res.status(200).json({ success: true, data: updatedRooms });
+  } catch (error) {
+    console.error('Error updating room status in bulk:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const viewAllRooms = async (req, res) => {
     try {
       const rooms = await getAllRooms();
@@ -223,6 +242,7 @@ export const updateRoomDetails = async (req, res) => {
 
     // Remove fields that shouldn't be sent to database
     delete roomData.existing_images;
+    delete roomData.id;
 
     console.log('Final update room data:', roomData);
 

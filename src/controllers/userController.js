@@ -1,5 +1,5 @@
 import { sendResponse, ResponseStatus } from '../utils/responseHandler.js';
-import { createUser, findUserByUsername,findUserById,getAllUsersFromDB, getReportsData, getStaffData, updateUserInDB, deleteUserById, getAllManagersFromDB,getAllStaffFromDB, changePassword,getUserById } from '../models/userModel.js';
+import { createUser, findUserByUsername,findUserById,getAllUsersFromDB, getReportsData, getStaffData, updateUserInDB, deleteUserById, getAllManagersFromDB,getAllStaffFromDB, changePassword,getUserById, getAllUsersWithProfileStatus, updateProfileCompleteStatus } from '../models/userModel.js';
 import { hashPassword, comparePasswords } from '../utils/passwordUtils.js';
 import {canUpdateUser} from '../utils/roleUtils.js';
 import jwt from 'jsonwebtoken';
@@ -88,11 +88,12 @@ export const checkUser = async (req, res) => {
             id: user.id,
             username: user.username,
             role: user.role,
-            firstName:user.firstName,
-            lastName: user.lastName,
+            firstName: user.firstname,
+            lastName: user.lastname,
             email: user.email,
             mobile: user.mobile,
-            address: user.address
+            address: user.address,
+            profile_complete: user.profile_complete
         };
 
         return sendResponse(res, ResponseStatus.SUCCESS, 'User verified successfully', userData);
@@ -110,7 +111,7 @@ export const checkUser = async (req, res) => {
 // Admin function to get all users
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await getAllUsersFromDB();
+        const users = await getAllUsersWithProfileStatus();
         return sendResponse(
             res, 
             ResponseStatus.SUCCESS, 
@@ -312,5 +313,119 @@ export const PasswordChange = async (req, res) => {
         }
     } catch (error) {
         return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error changing password', null, error.message);
+    }
+};
+
+// Register a new user and create staff in one go
+export const registerStaffFull = async (req, res) => {
+    // Validate user fields
+    const Joi = (await import('joi')).default;
+    const userSchema = Joi.object({
+        username: Joi.string().min(3).required(),
+        firstName: Joi.string().required(),
+        lastName: Joi.string().required(),
+        email: Joi.string().email().required(),
+        password: Joi.string().min(8).required().regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/),
+        role: Joi.string().valid('admin', 'manager', 'staff').required(),
+        mobile: Joi.string().required(),
+        address: Joi.string().required(),
+        department: Joi.string().required(),
+        salary: Joi.number().required(),
+        performance_score: Joi.number().required(),
+        shift: Joi.string().required(),
+        joined_date: Joi.date().iso().required(),
+        phone: Joi.string().required(),
+        status: Joi.string().optional(),
+    });
+    const { error } = userSchema.validate(req.body);
+    if (error) return sendResponse(res, ResponseStatus.BAD_REQUEST, error.details[0].message);
+
+    const {
+        username, firstName, lastName, email, password, role, mobile, address,
+        department, salary, performance_score, shift, joined_date, phone, status
+    } = req.body;
+
+    const prisma = (await import('../generated/prisma/index.js')).PrismaClient;
+    const db = new prisma();
+    try {
+        // Check for existing username/email
+        const existingUser = await db.users.findFirst({
+            where: { OR: [{ username }, { email }] }
+        });
+        if (existingUser) {
+            return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Username or email already exists');
+        }
+        // Hash password
+        const { hashPassword } = await import('../utils/passwordUtils.js');
+        const hashedPassword = await hashPassword(password);
+        // Create user
+        const newUser = await db.users.create({
+            data: {
+                username,
+                firstname: firstName,
+                lastname: lastName,
+                email,
+                password: hashedPassword,
+                role,
+                mobile,
+                address,
+                profile_complete: true, // Set to true since we're creating both user and staff
+            },
+        });
+        // Create staff
+        const newStaff = await db.staff.create({
+            data: {
+                user_id: newUser.id,
+                department,
+                status: status || 'active',
+                salary,
+                performance_score,
+                shift,
+                joined_date: new Date(joined_date),
+                email,
+                phone,
+            },
+        });
+        return sendResponse(res, ResponseStatus.CREATED, 'Staff user registered successfully', {
+            user: {
+                id: newUser.id,
+                username: newUser.username,
+                role: newUser.role,
+                firstName: newUser.firstname,
+                lastName: newUser.lastname,
+                email: newUser.email,
+                mobile: newUser.mobile,
+                address: newUser.address,
+                profile_complete: true
+            },
+            staff: newStaff
+        });
+    } catch (err) {
+        return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error registering staff user', null, err.message);
+    } finally {
+        await db.$disconnect();
+    }
+};
+
+// Function to update profile completion status for a user
+export const updateUserProfileStatus = async (req, res) => {
+    const { userId } = req.body;
+
+    try {
+        const updatedUser = await updateProfileCompleteStatus(userId);
+        return sendResponse(
+            res,
+            ResponseStatus.SUCCESS,
+            'Profile status updated successfully',
+            updatedUser
+        );
+    } catch (error) {
+        return sendResponse(
+            res,
+            ResponseStatus.SERVER_ERROR,
+            'Error updating profile status',
+            null,
+            error.message
+        );
     }
 };

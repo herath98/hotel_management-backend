@@ -1,15 +1,25 @@
 import cron from 'node-cron';
-import pool from '../config/database.js';
+import { PrismaClient } from '../generated/prisma/index.js';
+
+const prisma = new PrismaClient();
 
 // Schedule a cron job to check and update task statuses every minute
 cron.schedule('* * * * *', async () => {
   try {
-    const query = `
-      UPDATE housekeeping_tasks
-      SET task_status = 'Incomplete'
-      WHERE end_time <= NOW() AND task_status != 'Complete'`;
-    const result = await pool.query(query);
-    console.log(`Updated ${result.rowCount} tasks to 'Incomplete'`);
+    const result = await prisma.housekeeping_tasks.updateMany({
+      where: {
+        end_time: {
+          lte: new Date(),
+        },
+        task_status: {
+          not: 'Complete',
+        },
+      },
+      data: {
+        task_status: 'Incomplete',
+      },
+    });
+    console.log(`Updated ${result.count} tasks to 'Incomplete'`);
   } catch (err) {
     console.error('Error updating task statuses:', err);
   }

@@ -1,5 +1,4 @@
-import { getAllOrdersDB, getOrderByIdDB, createOrderDB, updateOrderStatusDB, deleteOrderDB } from '../models/OrderModel.js';
-import pool from '../config/database.js';
+import { getAllOrdersDB, getOrderByIdDB, createOrderDB, updateOrderStatusDB, deleteOrderDB, updateOrderInDB } from '../models/OrderModel.js';
 
 export const getAllOrders = async (req, res) => {
     try {
@@ -60,12 +59,15 @@ export const viewOrder = async (req, res) => {
 export const updateOrder = async (req, res) => {
     try {
         const { id, status, totalPrice, items, roomNumber, specialNotes } = req.body;
-        const result = await pool.query(
-            'UPDATE orders SET status = $1, total_price = $2, items = $3::jsonb, room_number = $4, special_notes = $5 WHERE id = $6 RETURNING *',
-            [status, totalPrice, JSON.stringify(items), roomNumber, specialNotes, id]
-        );
-        if (!result.rows[0]) return res.status(404).json({ message: 'Order not found' });
-        res.json({ message: 'Order updated successfully', order: result.rows[0] });
+        const updatedOrder = await updateOrderInDB(id, {
+            status,
+            total_price: totalPrice,
+            items,
+            room_number: roomNumber,
+            special_notes: specialNotes,
+        });
+        if (!updatedOrder) return res.status(404).json({ message: 'Order not found' });
+        res.json({ message: 'Order updated successfully', order: updatedOrder });
     } catch (error) {
         res.status(500).json({ message: 'Error updating order', error: error.message });
     }

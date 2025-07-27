@@ -2,7 +2,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import swaggerDocs from './src/config/swagger.js';
-import pool from './src/config/database.js';
 import userRoutes from './src/routes/userRoutes.js';
 import roomRoutes from './src/routes/roomRoutes.js';
 import guestRoutes from './src/routes/guestRoutes.js';
@@ -11,6 +10,7 @@ import bookingRoutes from './src/routes/bookingRoutes.js';
 import menuRoutes from './src/routes/menuRoutes.js';
 import orderRoutes from './src/routes/orderRoutes.js';
 import housekeepingRoutes from './src/routes/housekeepingRoutes.js';
+import staffRoutes from './src/routes/staffRoutes.js';
 import './src/jobs/taskStatusUpdater.js';
 
 // Load environment variables
@@ -44,18 +44,11 @@ app.use('/api', bookingRoutes);
 app.use('/api', menuRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', housekeepingRoutes);
+app.use('/api', staffRoutes);
 
 // Swagger documentation setup
 swaggerDocs(app);
 
-// Test database connection
-pool.query('SELECT NOW()', (err) => {
-  if (err) {
-    console.error('Database connection failed:', err);
-  } else {
-    console.log('Database connected successfully');
-  }
-});
 
 // Global Error Handler
 app.use((err, req, res, next) => {

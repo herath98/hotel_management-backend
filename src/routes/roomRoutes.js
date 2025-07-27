@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { createRoom, updateRoomDetails, getRoomAvailability, getRoomNotCleaned, updateRoomByStatus, deleteRoomById, getRoomUsingId,getBookedRoomsList,viewAllRooms, deleteMultipleRooms } from '../controllers/roomController.js';
+import { createRoom, updateRoomDetails, getRoomAvailability, getRoomNotCleaned, updateRoomByStatus, deleteRoomById, getRoomUsingId, getBookedRoomsList,viewAllRooms, deleteMultipleRooms, updateRoomStatusBulkController } from '../controllers/roomController.js';
 import { deleteRoomImage} from '../models/roomModel.js';
 import { verifyUser, requireRole } from '../middleware/validationMiddleware.js';
 
@@ -267,6 +267,63 @@ router.post('/rooms',
  *         description: Internal server error
  */
 router.post('/rooms/bulk/delete', verifyUser, requireRole(['admin', 'manager']), deleteMultipleRooms);
+
+/**
+ * @swagger
+ * /rooms/bulk/status:
+ *   post:
+ *     summary: Update status for multiple rooms
+ *     tags:
+ *       - Rooms
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *               - status
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: Array of room IDs to update
+ *               status:
+ *                 type: string
+ *                 description: The new status to set for the rooms
+ *     responses:
+ *       200:
+ *         description: Rooms status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Room'
+ *       400:
+ *         description: Bad request - missing or invalid IDs or status
+ *       401:
+ *         description: Unauthorized - invalid or missing token
+ *       403:
+ *         description: Forbidden - insufficient permissions
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/rooms/bulk/status',
+  verifyUser,
+  requireRole(['admin', 'manager']),
+  updateRoomStatusBulkController
+);
   
 /**
  * @swagger
@@ -390,16 +447,16 @@ router.post('/rooms/update',
 router.get('/rooms/availability', verifyUser, requireRole(['admin', 'manager']), getRoomAvailability);
 /**
  * @swagger
- * /rooms/availability:
+ * /rooms/all/list:
  *   get:
- *     summary: Get available rooms
+ *     summary: Get all rooms
  *     tags:
  *       - Rooms
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of available rooms
+ *         description: List of all rooms
  *         content:
  *           application/json:
  *             schema:
@@ -566,5 +623,33 @@ router.post('/rooms/delete-image',
   requireRole(['admin', 'manager']),
   deleteRoomImage
 );
+/**
+ * @swagger
+ * /rooms/getall:
+ *   get:
+ *     summary: Get all rooms
+ *     tags:
+ *       - Rooms
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all rooms
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Room'
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/rooms/getall', verifyUser, requireRole(['admin', 'manager']), viewAllRooms);
 
 export default router;

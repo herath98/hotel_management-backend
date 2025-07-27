@@ -9,7 +9,9 @@ import {
     checkUser,
     updateUser,
     getAllManagers,
-    PasswordChange
+    PasswordChange,
+    registerStaffFull,
+    updateUserProfileStatus
     
 } from '../controllers/userController.js';
 import { 
@@ -126,6 +128,79 @@ const router = express.Router();
  *         description: Server error
  */
 router.post('/register', validateRegister, registerUser);
+
+/**
+ * @swagger
+ * /register/staff/full:
+ *   post:
+ *     summary: Register a new user and staff member in one request
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
+ *               - role
+ *               - mobile
+ *               - address
+ *               - department
+ *               - salary
+ *               - performance_score
+ *               - shift
+ *               - joined_date
+ *               - phone
+ *             properties:
+ *               username:
+ *                 type: string
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [admin, manager, staff]
+ *               mobile:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               department:
+ *                 type: string
+ *               salary:
+ *                 type: number
+ *               performance_score:
+ *                 type: number
+ *               shift:
+ *                 type: string
+ *               joined_date:
+ *                 type: string
+ *                 format: date-time
+ *               phone:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 default: active
+ *     responses:
+ *       201:
+ *         description: Staff user registered successfully
+ *       400:
+ *         description: Validation error
+ *       500:
+ *         description: Server error
+ */
+router.post('/register/staff/full', registerStaffFull);
 
 /**
  * @swagger
@@ -492,8 +567,55 @@ router.get('/admin/managers/list', verifyUser, requireRole(['admin']), getAllMan
  */
 router.post('/users/edit', verifyUser, validateUpdate, updateUser);
 
-
-
-
+/**
+ * @swagger
+ * /users/profile-status:
+ *   post:
+ *     summary: Update user profile completion status
+ *     tags:
+ *       - User Management
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 example: 1
+ *     responses:
+ *       200:
+ *         description: Profile status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Profile status updated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     username:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     profile_complete:
+ *                       type: boolean
+ *       500:
+ *         description: Server error
+ */
+router.post('/users/profile-status', verifyUser, updateUserProfileStatus);
 
 export default router;
