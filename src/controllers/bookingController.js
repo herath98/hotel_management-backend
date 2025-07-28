@@ -10,6 +10,7 @@ import {
 import { sendNotificationEmail } from '../utils/email.js';
 import { getRoomById } from '../models/roomModel.js';
 import { findUserById } from '../models/userModel.js';
+import { sendResponse, ResponseStatus } from '../utils/responseHandler.js';
 
 export const createBooking = async (req, res, next) => {
     try {
@@ -38,13 +39,10 @@ export const createBooking = async (req, res, next) => {
                 console.error('No email provided for booking:', booking);
             }
             
-            res.status(201).json({ 
-                message: "Booking created successfully", 
-                booking 
-            });
+            return sendResponse(res, ResponseStatus.CREATED, "Booking created successfully", booking);
         } catch (error) {
             if (error.message === 'Room is not available for booking') {
-                return res.status(400).json({ message: error.message });
+                return sendResponse(res, ResponseStatus.BAD_REQUEST, error.message);
             }
             throw error;
         }
@@ -61,7 +59,7 @@ export const updateBooking = async (req, res, next) => {
         const updatedBooking = await updateBookingInDB(bookingId, updateData);
         
         if (!updatedBooking) {
-            return res.status(404).json({ message: "Booking not found" });
+            return sendResponse(res, ResponseStatus.NOT_FOUND, "Booking not found");
         }
 
         const roomDetails = await  getRoomById(updatedBooking.room_id);
@@ -75,7 +73,7 @@ export const updateBooking = async (req, res, next) => {
             userDetails
         );
 
-        res.status(200).json({ message: "Booking updated successfully", booking: updatedBooking });
+        return sendResponse(res, ResponseStatus.SUCCESS, "Booking updated successfully", updatedBooking);
     } catch (error) {
         next(error);
     }
@@ -88,15 +86,13 @@ export const updateBookingStatus = async (req, res, next) => {
 
         const validStatuses = ['pending', 'confirmed', 'cancelled', 'completed'];
         if (!validStatuses.includes(status)) {
-            return res.status(400).json({ 
-                message: "Invalid status. Must be one of: " + validStatuses.join(', ')
-            });
+            return sendResponse(res, ResponseStatus.BAD_REQUEST, "Invalid status. Must be one of: " + validStatuses.join(', '));
         }
 
         const updatedBooking = await updateBookingStatusInDB(bookingId, status);
         
         if (!updatedBooking) {
-            return res.status(404).json({ message: "Booking not found" });
+            return sendResponse(res, ResponseStatus.NOT_FOUND, "Booking not found");
         }
 
         const roomDetails = await  getRoomById(updatedBooking.room_id);
@@ -110,10 +106,7 @@ export const updateBookingStatus = async (req, res, next) => {
             userDetails
         );
 
-        res.status(200).json({ 
-            message: "Booking status updated successfully", 
-            booking: updatedBooking 
-        });
+        return sendResponse(res, ResponseStatus.SUCCESS, "Booking status updated successfully", updatedBooking);
     } catch (error) {
         next(error);
     }
@@ -123,7 +116,7 @@ export const getBookingList = async (req, res, next) => {
     try {
         const { status } = req.query;
         const bookings = await getBookingListFromDB(status);
-        res.status(200).json(bookings);
+        return sendResponse(res, ResponseStatus.SUCCESS, "Bookings retrieved successfully", bookings);
     } catch (error) {
         next(error);
     }
@@ -135,10 +128,10 @@ export const getBookingById = async (req, res, next) => {
         const booking = await getBookingByIdFromDB(bookingId);
         
         if (!booking) {
-            return res.status(404).json({ message: "Booking not found" });
+            return sendResponse(res, ResponseStatus.NOT_FOUND, "Booking not found");
         }
 
-        res.status(200).json(booking);
+        return sendResponse(res, ResponseStatus.SUCCESS, "Booking retrieved successfully", booking);
     } catch (error) {
         next(error);
     }

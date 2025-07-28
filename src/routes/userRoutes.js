@@ -136,6 +136,8 @@ router.post('/register', validateRegister, registerUser);
  *     summary: Register a new user and staff member in one request
  *     tags:
  *       - Authentication
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -200,7 +202,7 @@ router.post('/register', validateRegister, registerUser);
  *       500:
  *         description: Server error
  */
-router.post('/register/staff/full', registerStaffFull);
+router.post('/register/staff/full', verifyUser, requireRole(['admin','manager']), registerStaffFull);
 
 /**
  * @swagger
@@ -208,7 +210,8 @@ router.post('/register/staff/full', registerStaffFull);
  *   post:
  *     summary: Login a user
  *     tags:
- *       - Authentication
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:

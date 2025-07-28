@@ -3,12 +3,13 @@ const prisma = new PrismaClient();
 import { response } from 'express';
 import { validationResult } from 'express-validator';
 import { updateSingleUserProfileStatus } from '../utils/updateProfileStatus.js';
+import { sendResponse, ResponseStatus } from '../utils/responseHandler.js';
 
 // Create a new staff member
 export const createStaff = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Validation errors', null, errors.array());
   }
 
   const {
@@ -27,7 +28,7 @@ export const createStaff = async (req, res) => {
   // Only allow specific roles
   const allowedRoles = ['admin', 'manager', 'staff'];
   if (!allowedRoles.includes(role)) {
-    return res.status(400).json({ error: 'Role must be admin, manager, or staff.' });
+    return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Role must be admin, manager, or staff.');
   }
 
   try {
@@ -36,7 +37,7 @@ export const createStaff = async (req, res) => {
       where: { id: user_id },
     });
     if (!user) {
-      return res.status(404).json({ error: 'User not found for user_id.' });
+      return sendResponse(res, ResponseStatus.NOT_FOUND, 'User not found for user_id.');
     }
 
     // Update user role
@@ -63,10 +64,10 @@ export const createStaff = async (req, res) => {
     // Update user's profile completion status
     await updateSingleUserProfileStatus(user_id);
 
-    res.status(201).json(newStaff);
+    return sendResponse(res, ResponseStatus.CREATED, 'Staff member created successfully', newStaff);
   } catch (error) {
     console.error('Error creating staff:', error);
-    res.status(500).json({ error: 'Failed to create staff member.' });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Failed to create staff member.', null, error.message);
   }
 };
 
@@ -113,10 +114,10 @@ export const getAllStaff = async (req, res) => {
 
     // Merge staffMembers and formattedUsers
     const allStaff = [...staffMembers, ...formattedUsers];
-    res.status(200).json(allStaff);
+    return sendResponse(res, ResponseStatus.SUCCESS, 'Staff members retrieved successfully', allStaff);
   } catch (error) {
     console.error('Error fetching staff:', error);
-    res.status(500).json({ error: 'Failed to fetch staff members.' });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Failed to fetch staff members.', null, error.message);
   }
 };
 
@@ -131,12 +132,12 @@ export const getStaffById = async (req, res) => {
       },
     });
     if (!staffMember) {
-      return res.status(404).json({ error: 'Staff member not found.' });
+      return sendResponse(res, ResponseStatus.NOT_FOUND, 'Staff member not found.');
     }
-    res.status(200).json(staffMember);
+    return sendResponse(res, ResponseStatus.SUCCESS, 'Staff member retrieved successfully', staffMember);
   } catch (error) {
     console.error('Error fetching staff by ID:', error);
-    res.status(500).json({ error: 'Failed to fetch staff member.' });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Failed to fetch staff member.', null, error.message);
   }
 };
 
@@ -145,7 +146,7 @@ export const updateStaff = async (req, res) => {
   const { id } = req.params;
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Validation errors', null, errors.array());
   }
 
   const {
@@ -174,13 +175,13 @@ export const updateStaff = async (req, res) => {
       where: { id: parseInt(id) },
       data: updateData,
     });
-    res.status(200).json(updatedStaff);
+    return sendResponse(res, ResponseStatus.SUCCESS, 'Staff member updated successfully', updatedStaff);
   } catch (error) {
     console.error('Error updating staff:', error);
     if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Staff member not found.' });
+      return sendResponse(res, ResponseStatus.NOT_FOUND, 'Staff member not found.');
     }
-    res.status(500).json({ error: 'Failed to update staff member.' });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Failed to update staff member.', null, error.message);
   }
 };
 
@@ -195,22 +196,24 @@ export const deleteStaff = async (req, res) => {
     });
 
     if (!staffMember) {
-      return res.status(404).json({ error: 'Staff member not found.' });
+      return sendResponse(res, ResponseStatus.NOT_FOUND, 'Staff member not found.');
     }
 
     await prisma.staff.delete({
       where: { id: parseInt(id) },
     });
 
-    // Update user's profile completion status
-    await updateSingleUserProfileStatus(staffMember.user_id);
+    // Delete user from users table
+    await prisma.users.delete({
+      where: { id: staffMember.user_id }
+    });
 
-    res.status(204).send();
+    return sendResponse(res, ResponseStatus.SUCCESS, 'Staff member and user deleted successfully');
   } catch (error) {
     console.error('Error deleting staff:', error);
     if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'Staff member not found.' });
+      return sendResponse(res, ResponseStatus.NOT_FOUND, 'Staff member not found.');
     }
-    res.status(500).json({ error: 'Failed to delete staff member.' });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Failed to delete staff member.', null, error.message);
   }
 };

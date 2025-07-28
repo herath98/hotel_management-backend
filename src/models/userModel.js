@@ -87,6 +87,20 @@ export const getAllUsersFromDB = async () => {
 };
 
 export const deleteUserById = async (id) => {
+    // First, check if user is staff
+    const user = await prisma.users.findUnique({
+        where: { id: parseInt(id, 10) },
+        select: { role: true }
+    });
+
+    // If staff, delete from staff table first
+    if (user && (user.role === 'staff' ||  user.role === 'manager')) {
+        await prisma.staff.deleteMany({
+            where: { user_id: parseInt(id, 10) }
+        });
+    }
+
+    // Delete user from users table
     return await prisma.users.delete({
         where: {
             id: parseInt(id, 10),

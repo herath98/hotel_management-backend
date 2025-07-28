@@ -1,5 +1,6 @@
 // controllers/menuController.js
 import MenuModel from '../models/MenuModel.js';
+import { sendResponse, ResponseStatus } from '../utils/responseHandler.js';
 
 const MenuController = {
     async createMenu(req, res) {
@@ -8,29 +9,23 @@ const MenuController = {
           
           // Validate required fields
           if (!name || !price || !category) {
-            return res.status(400).json({ 
-              error: 'Name, price, and category are required fields' 
-            });
+            return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Name, price, and category are required fields');
           }
     
           // Validate price format
           if (typeof price !== 'number' || price <= 0) {
-            return res.status(400).json({ 
-              error: 'Price must be a positive number' 
-            });
+            return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Price must be a positive number');
           }
     
           // Validate description length
           if (description && description.length > 500) {
-            return res.status(400).json({
-              error: 'Description must not exceed 500 characters'
-            });
+            return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Description must not exceed 500 characters');
           }
     
           const menu = await MenuModel.create(req.body);
-          res.status(201).json(menu);
+          return sendResponse(res, ResponseStatus.CREATED, 'Menu item created successfully', menu);
         } catch (error) {
-          res.status(400).json({ error: error.message });
+          return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Error creating menu item', null, error.message);
         }
       },
     
@@ -53,9 +48,9 @@ const MenuController = {
             );
           }
     
-          res.status(200).json(menus);
+          return sendResponse(res, ResponseStatus.SUCCESS, 'Menu items retrieved successfully', menus);
         } catch (error) {
-          res.status(500).json({ error: error.message });
+          return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error retrieving menu items', null, error.message);
         }
       },
 
@@ -63,18 +58,16 @@ const MenuController = {
     try {
       // Validate price if provided
       if (req.body.price && (typeof req.body.price !== 'number' || req.body.price <= 0)) {
-        return res.status(400).json({ 
-          error: 'Price must be a positive number' 
-        });
+        return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Price must be a positive number');
       }
 
       const menu = await MenuModel.update(req.params.id, req.body);
       if (!menu) {
-        return res.status(404).json({ error: 'Menu item not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Menu item not found');
       }
-      res.status(200).json(menu);
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Menu item updated successfully', menu);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Error updating menu item', null, error.message);
     }
   },
 
@@ -82,14 +75,11 @@ const MenuController = {
     try {
       const menu = await MenuModel.delete(req.params.id);
       if (!menu) {
-        return res.status(404).json({ error: 'Menu item not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Menu item not found');
       }
-      res.status(200).json({ 
-        message: 'Menu item deleted successfully',
-        deletedItem: menu 
-      });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Menu item deleted successfully', { deletedItem: menu });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error deleting menu item', null, error.message);
     }
   }
 };

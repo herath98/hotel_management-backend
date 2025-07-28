@@ -5,17 +5,15 @@ import {
     deleteGuest ,
     listAllGuests
   } from '../models/guestModel.js';
+import { sendResponse, ResponseStatus } from '../utils/responseHandler.js';
   
   export const listGuestProfiles = async (req, res) => {
     try {
       const guests = await listAllGuests();
-      res.status(200).json({
-        success: true,
-        data: guests
-      });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Guest profiles retrieved successfully', guests);
     } catch (error) {
       console.error('Error in listGuestProfiles:', error);
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Server error', null, error.message);
     }
   };
   
@@ -24,21 +22,18 @@ import {
       const { id } = req.body;
       
       if (!id) {
-        return res.status(400).json({ success: false, message: 'Guest ID is required' });
+        return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Guest ID is required');
       }
   
       const guest = await getGuestById(id);
       if (!guest) {
-        return res.status(404).json({ success: false, message: 'Guest not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Guest not found');
       }
       
-      res.status(200).json({
-        success: true,
-        data: guest
-      });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Guest profile retrieved successfully', guest);
     } catch (error) {
       console.error('Error in viewGuestProfile:', error);
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Server error', null, error.message);
     }
   };
   
@@ -47,14 +42,14 @@ import {
       // Input validation
       const { name, contact } = req.body;
       if (!name || !contact) {
-        return res.status(400).json({ success: false, message: 'Name and contact information are required' });
+        return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Name and contact information are required');
       }
   
       const newGuest = await createGuest(req.body);
-      res.status(201).json({ success: true, data: newGuest });
+      return sendResponse(res, ResponseStatus.CREATED, 'Guest profile created successfully', newGuest);
     } catch (error) {
       console.error('Error in createGuestProfile:', error);
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Server error', null, error.message);
     }
   };
   
@@ -62,17 +57,17 @@ import {
     try {
       const { id, ...updateData } = req.body;
       if (!id) {
-        return res.status(400).json({ success: false, message: 'Guest ID is required' });
+        return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Guest ID is required');
       }
   
       const updatedGuest = await updateGuest(id, updateData);
       if (!updatedGuest) {
-        return res.status(404).json({ success: false, message: 'Guest not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Guest not found');
       }
-      res.status(200).json({ success: true, data: updatedGuest });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Guest profile updated successfully', updatedGuest);
     } catch (error) {
       console.error('Error in updateGuestProfile:', error);
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Server error', null, error.message);
     }
   };
   
@@ -80,17 +75,17 @@ import {
     try {
       const { id } = req.body;
       if (!id) {
-        return res.status(400).json({ success: false, message: 'Guest ID is required' });
+        return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Guest ID is required');
       }
   
       const deletedGuest = await deleteGuest(id);
       if (!deletedGuest) {
-        return res.status(404).json({ success: false, message: 'Guest not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Guest not found');
       }
-      res.status(200).json({ success: true, message: 'Guest deleted successfully', guest: deletedGuest });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Guest deleted successfully', deletedGuest);
     } catch (error) {
       console.error('Error in deleteGuestProfile:', error);
-      res.status(500).json({ success: false, message: 'Server error', error: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Server error', null, error.message);
     }
   };
 

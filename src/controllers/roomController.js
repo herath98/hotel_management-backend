@@ -1,6 +1,7 @@
 import { addRoom, updateRoom, getRoomsByStatus, updateRoomStatus, deleteRoom, getRoomById, getAllRooms, deleteRooms, updateRoomStatusBulk } from '../models/roomModel.js';
 import cloudinary from '../config/cloudinary.js';
 import fs from 'fs/promises';
+import { sendResponse, ResponseStatus } from '../utils/responseHandler.js';
 
 export const createRoom = async (req, res) => {
   try {
@@ -92,10 +93,10 @@ export const createRoom = async (req, res) => {
     console.log('Final room data:', roomData);
 
     const newRoom = await addRoom(roomData);
-    res.status(201).json({ success: true, data: newRoom });
+    return sendResponse(res, ResponseStatus.CREATED, 'Room created successfully', newRoom);
   } catch (error) {
     console.error('Final error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error creating room', null, error.message);
   }
 };
 
@@ -103,16 +104,16 @@ export const deleteMultipleRooms = async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, message: 'Room IDs are required' });
+            return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Room IDs are required');
         }
         const deletedRooms = await deleteRooms(ids);
         if (!deletedRooms || deletedRooms.length === 0) {
-            return res.status(404).json({ success: false, message: 'No rooms found with provided IDs' });
+            return sendResponse(res, ResponseStatus.NOT_FOUND, 'No rooms found with provided IDs');
         }
-        res.status(200).json({ success: true, data: deletedRooms });
+        return sendResponse(res, ResponseStatus.SUCCESS, 'Rooms deleted successfully', deletedRooms);
     } catch (error) {
         console.error('Error deleting rooms:', error);
-        res.status(500).json({ success: false, message: error.message });
+        return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error deleting rooms', null, error.message);
     }
 };
 
@@ -121,27 +122,27 @@ export const updateRoomStatusBulkController = async (req, res) => {
     const { ids, status } = req.body;
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, message: 'Room IDs are required' });
+      return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Room IDs are required');
     }
     if (!status) {
-      return res.status(400).json({ success: false, message: 'Status is required' });
+      return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Status is required');
     }
 
     const updatedRooms = await updateRoomStatusBulk(ids, status);
-    res.status(200).json({ success: true, data: updatedRooms });
+    return sendResponse(res, ResponseStatus.SUCCESS, 'Room status updated successfully', updatedRooms);
   } catch (error) {
     console.error('Error updating room status in bulk:', error);
-    res.status(500).json({ success: false, message: error.message });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error updating room status', null, error.message);
   }
 };
 
 export const viewAllRooms = async (req, res) => {
     try {
       const rooms = await getAllRooms();
-      res.status(200).json({ success: true, data: rooms });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Rooms retrieved successfully', rooms);
     } catch (error) {
       console.error('Error fetching all rooms:', error);
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error retrieving rooms', null, error.message);
     }
   };
 
@@ -229,10 +230,7 @@ export const updateRoomDetails = async (req, res) => {
       if (roomData.discount_rules) roomData.discount_rules = JSON.parse(roomData.discount_rules);
     } catch (parseError) {
       console.error('JSON parse error during update:', parseError);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid JSON format in one of the fields'
-      });
+      return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Invalid JSON format in one of the fields');
     }
 
     // Handle boolean fields
@@ -248,23 +246,14 @@ export const updateRoomDetails = async (req, res) => {
 
     const updatedRoom = await updateRoom(id, roomData);
     if (!updatedRoom) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Room not found' 
-      });
+      return sendResponse(res, ResponseStatus.NOT_FOUND, 'Room not found');
     }
 
-    res.status(200).json({ 
-      success: true, 
-      data: updatedRoom 
-    });
+    return sendResponse(res, ResponseStatus.SUCCESS, 'Room updated successfully', updatedRoom);
     
   } catch (error) {
     console.error('Final update error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
-    });
+    return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error updating room', null, error.message);
   }
 };
   
@@ -273,27 +262,27 @@ export const getRoomAvailability = async (req, res) => {
     try {
       
       const rooms = await getRoomsByStatus('Available');
-      res.status(200).json({ success: true, data: rooms });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Available rooms retrieved successfully', rooms);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error retrieving available rooms', null, error.message);
     }
   };
 export const getRoomNotCleaned = async (req, res) => {
     try {
       
       const rooms = await getRoomsByStatus('Available Not Cleaned');
-      res.status(200).json({ success: true, data: rooms });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Not cleaned rooms retrieved successfully', rooms);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error retrieving not cleaned rooms', null, error.message);
     }
   };
 export const getBookedRoomsList = async (req, res) => {
     try {
       
       const rooms = await getRoomsByStatus('Unavailable');
-      res.status(200).json({ success: true, data: rooms });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Booked rooms retrieved successfully', rooms);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error retrieving booked rooms', null, error.message);
     }
   };
 
@@ -302,11 +291,11 @@ export const updateRoomByStatus = async (req, res) => {
       const {  id, status } = req.body;
       const updatedRoom = await updateRoomStatus(id, status);
       if (!updatedRoom) {
-        return res.status(404).json({ success: false, message: 'Room not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Room not found');
       }
-      res.status(200).json({ success: true, data: updatedRoom });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Room status updated successfully', updatedRoom);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error updating room status', null, error.message);
     }
   };
 
@@ -315,11 +304,11 @@ export const deleteRoomById = async (req, res) => {
       const { id } = req.body;
       const deletedRoom = await deleteRoom(id);
       if (!deletedRoom) {
-        return res.status(404).json({ success: false, message: 'Room not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Room not found');
       }
-      res.status(200).json({ success: true, data: deletedRoom });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Room deleted successfully', deletedRoom);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error deleting room', null, error.message);
     }
   };
 
@@ -328,14 +317,14 @@ export const deleteRoomById = async (req, res) => {
       const { id } = req.body; // Extract id from request body
       console.log('Requested room id:', id); // Log the requested id
       if (!id) {
-        return res.status(400).json({ success: false, message: 'Room ID is required' });
+        return sendResponse(res, ResponseStatus.BAD_REQUEST, 'Room ID is required');
       }
       const room = await getRoomById(id);
       if (!room) {
-        return res.status(404).json({ success: false, message: 'Room not found' });
+        return sendResponse(res, ResponseStatus.NOT_FOUND, 'Room not found');
       }
-      res.status(200).json({ success: true, data: room });
+      return sendResponse(res, ResponseStatus.SUCCESS, 'Room retrieved successfully', room);
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      return sendResponse(res, ResponseStatus.SERVER_ERROR, 'Error retrieving room', null, error.message);
     }
   };
